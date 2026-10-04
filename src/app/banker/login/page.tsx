@@ -1,6 +1,23 @@
+'use client'
+
 import Link from "next/link";
+import { useState, useTransition } from "react";
+import { login } from "../../actions"; // Import action yang sama dengan player
 
 export default function BankerLoginPage() {
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const onSubmit = async (formData: FormData) => {
+    setError(null);
+    startTransition(async () => {
+      const result = await login(formData);
+      if (result?.error) {
+        setError(result.error);
+      }
+    });
+  };
+
   return (
     <main className="flex-1 flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-sm space-y-8">
@@ -9,17 +26,18 @@ export default function BankerLoginPage() {
           <p className="mt-2 text-text-secondary text-[15px]">Masuk untuk mengelola permainan.</p>
         </div>
 
-        <form className="space-y-4">
+        <form action={onSubmit} className="space-y-4">
           <div className="space-y-4 bg-surface-secondary rounded-2xl p-4">
             <div>
-              <label className="sr-only" htmlFor="username">Username</label>
+              <label className="sr-only" htmlFor="identifier">Username / Email</label>
               <input 
-                id="username"
-                name="username"
+                id="identifier"
+                name="identifier"
                 type="text" 
-                placeholder="Username (e.g. bank)"
+                placeholder="Username / Email"
                 className="w-full bg-transparent border-b border-divider pb-2 text-[17px] text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-brand transition-colors"
                 required
+                disabled={isPending}
               />
             </div>
             <div>
@@ -31,15 +49,23 @@ export default function BankerLoginPage() {
                 placeholder="Password"
                 className="w-full bg-transparent pt-2 text-[17px] text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-brand transition-colors"
                 required
+                disabled={isPending}
               />
             </div>
           </div>
 
+          {error && (
+            <div className="text-color-expense text-sm text-center font-medium bg-color-expense/10 p-3 rounded-xl">
+              {error}
+            </div>
+          )}
+
           <button 
             type="submit"
-            className="w-full flex items-center justify-center bg-text-primary text-background h-14 rounded-2xl font-semibold text-[17px] active:opacity-80 transition-opacity mt-6"
+            disabled={isPending}
+            className="w-full flex items-center justify-center bg-text-primary text-background h-14 rounded-2xl font-semibold text-[17px] active:opacity-80 transition-opacity mt-6 disabled:opacity-70"
           >
-            Masuk sebagai Bankir
+            {isPending ? 'Memproses...' : 'Masuk sebagai Bankir'}
           </button>
         </form>
 

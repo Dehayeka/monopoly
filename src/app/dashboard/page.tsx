@@ -16,6 +16,10 @@ export default async function DashboardPage() {
     .eq("user_id", user.id)
     .single();
 
+  if (profile?.role === 'BANKER') {
+    redirect("/banker/dashboard");
+  }
+
   return (
     <main className="flex-1 flex flex-col p-6 max-w-md mx-auto w-full pt-12 space-y-8">
       <div>

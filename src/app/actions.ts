@@ -105,3 +105,50 @@ export async function register(formData: FormData) {
   revalidatePath('/', 'layout')
   redirect('/dashboard')
 }
+
+// Generate short random code
+function generateRoomCode() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+export async function createGame(formData: FormData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return { error: 'Unauthorized' };
+
+  const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
+  
+  if (profile?.role !== 'BANKER') return { error: 'Unauthorized' };
+
+  const name = formData.get('name') as string;
+  const initialBalance = parseInt(formData.get('initialBalance') as string) || 1500;
+  const showPlayerBalances = formData.get('showBalances') === 'on';
+  const allowJoinAfterStart = formData.get('allowJoin') === 'on';
+  
+  let roomCode = generateRoomCode();
+  
+  // Basic retry logic for room code collision
+  for (let i = 0; i < 3; i++) {
+    const { data: existing } = await supabase.from('games').select('id').eq('room_code', roomCode).single();
+    if (!existing) break;
+    roomCode = generateRoomCode();
+  }
+
+  const { data: game, error } = await supabase.from('games').insert({
+    name,
+    room_code: roomCode,
+    banker_id: profile.id,
+    initial_balance: initialBalance,
+    show_player_balances: showPlayerBalances,
+    allow_join_after_start: allowJoinAfterStart,
+    status: 'WAITING'
+  }).select().single();
+
+  if (error) {
+    return { error: 'Gagal membuat permainan.' };
+  }
+
+  revalidatePath('/banker/dashboard');
+  redirect(`/banker/game/${game.id}`);
+}
